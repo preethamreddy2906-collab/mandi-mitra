@@ -6,6 +6,7 @@ import Header from "./components/Header";
 import Hero from "./components/Hero";
 import StatsCards from "./components/StatsCards";
 import FarmerForm from "./components/FarmerForm";
+import LoactionPicker from "./components/LocationPicker";
 import WeatherCard from "./components/WeatherCard";
 import MarketCard from "./components/MarketCard";
 import MaxPriceTrendChart from "./components/MaxPriceTrendChart";
@@ -14,6 +15,7 @@ import AdvisoryCard from "./components/AdvisoryCard";
 import FloatingButtons from "./components/FloatingButtons";
 import Footer from "./components/Footer";
 import LoadingScreen from "./components/LoadingScreen";
+import LocationPicker from "./components/LocationPicker";
 import { getTranslator } from "./components/translations";
 import { normalizeAdvisory } from "./components/advisoryAdapter";
 
@@ -33,6 +35,12 @@ function FarmerDashboard() {
   const [advisory, setAdvisory] = useState(null);
   const [priceHistory, setPriceHistory] = useState(null);
   const [loading, setLoading] = useState(false);
+
+  // Location detection state
+  const [locationLoading, setLocationLoading] = useState(false);
+  const [locationLabel, setLocationLabel] = useState("");
+  const [locationError, setLocationError] = useState("");
+  const [showLocationPicker, setShowLocationPicker] = useState(false);
 
   const t = getTranslator(formData.language);
 
@@ -68,12 +76,105 @@ function FarmerDashboard() {
     setFormData((prev) => ({ ...prev, language }));
   };
 
+  // Shared applier used by both GPS auto-detect and manual map picker
+  const applyResolvedLocation = ({
+    latitude,
+    longitude,
+    label,
+    village,
+    mandal,
+    state,
+  }) => {
+    setFormData((prev) => ({
+      ...prev,
+      latitude,
+      longitude,
+      district: mandal || prev.district,
+      state: state || prev.state,
+    }));
+    setLocationLabel(
+      label || [village, mandal].filter(Boolean).join(", ") || "Location set"
+    );
+  };
+
+  const reverseGeocode = async (lat, lng) => {
+    const res = await fetch(
+      `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=14&addressdetails=1`,
+      { headers: { "Accept-Language": "en" } }
+    );
+    const data = await res.json();
+    const addr = data.address || {};
+
+    const village =
+      addr.village || addr.hamlet || addr.town || addr.suburb || "";
+    const mandal =
+      addr.county || addr.state_district || addr.city_district || "";
+
+    return {
+      village,
+      mandal,
+      state: addr.state || "",
+      display_name: data.display_name || "",
+    };
+  };
+
+  const handleDetectLocation = () => {
+    if (!navigator.geolocation) {
+      setLocationError("Geolocation not supported on this device.");
+      return;
+    }
+
+    setLocationLoading(true);
+    setLocationError("");
+
+    navigator.geolocation.getCurrentPosition(
+      async (position) => {
+        const { latitude, longitude } = position.coords;
+
+        setFormData((prev) => ({ ...prev, latitude, longitude }));
+
+        try {
+          const { village, mandal, state, display_name } =
+            await reverseGeocode(latitude, longitude);
+
+          applyResolvedLocation({
+            latitude,
+            longitude,
+            label: [village, mandal].filter(Boolean).join(", ") || display_name,
+            village,
+            mandal,
+            state,
+          });
+        } catch (err) {
+          console.error("Reverse geocoding failed:", err);
+          setLocationLabel("Coordinates captured (name lookup failed)");
+        } finally {
+          setLocationLoading(false);
+        }
+      },
+      (error) => {
+        console.error(error);
+        setLocationError(
+          error.code === error.PERMISSION_DENIED
+            ? "Location permission denied. Please allow access or adjust manually."
+            : "Could not fetch location automatically. Try adjusting manually."
+        );
+        setLocationLoading(false);
+      },
+      { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+    );
+  };
+
+  const handleManualLocationConfirm = (result) => {
+    applyResolvedLocation(result);
+    setShowLocationPicker(false);
+  };
+
   const handleSubmit = async () => {
     if (!formData.state || !formData.crop || !formData.market) {
       alert("Please select state, crop and market first.");
       return;
     }
-
 
     setLoading(true);
 
@@ -85,8 +186,8 @@ function FarmerDashboard() {
         harvestDate: formData.harvestDate,
         quantity: formData.quantity,
         market: formData.market,
-        latitude: 13.552040,
-        longitude: 78.505798,
+        latitude: formData.latitude || 13.552040,
+        longitude: formData.longitude || 78.505798,
       });
 
       console.log("raw gemma response:", response.data);
@@ -139,6 +240,16 @@ function FarmerDashboard() {
     <div className="min-h-screen bg-gradient-to-b from-green-50 via-white to-green-50">
       {loading && <LoadingScreen />}
 
+      {showLocationPicker && (
+        <LocationPicker
+          t={t}
+          initialLat={formData.latitude}
+          initialLng={formData.longitude}
+          onConfirm={handleManualLocationConfirm}
+          onClose={() => setShowLocationPicker(false)}
+        />
+      )}
+
       <Header
         language={formData.language}
         onLanguageChange={handleLanguageChange}
@@ -166,6 +277,11 @@ function FarmerDashboard() {
                 onChange={handleChange}
                 onSubmit={handleSubmit}
                 loading={loading}
+                onDetectLocation={handleDetectLocation}
+                onOpenLocationPicker={() => setShowLocationPicker(true)}
+                locationLoading={locationLoading}
+                locationLabel={locationLabel}
+                locationError={locationError}
               />
             </div>
           </div>

@@ -7,6 +7,7 @@ import {
   FaCalendarAlt,
   FaWeightHanging,
   FaMicrophone,
+  FaCrosshairs,
 } from "react-icons/fa";
 import VoiceInput from "./VoiceInput";
 
@@ -92,7 +93,18 @@ function FieldLabel({ icon, children }) {
 const selectClass =
   "w-full border-2 border-gray-200 rounded-xl px-4 py-3.5 text-base bg-white focus:outline-none focus:ring-4 focus:ring-green-100 focus:border-green-500 transition disabled:bg-gray-50 disabled:cursor-not-allowed";
 
-function FarmerForm({ t, formData, onChange, onSubmit, loading }) {
+function FarmerForm({
+  t,
+  formData,
+  onChange,
+  onSubmit,
+  loading,
+  onDetectLocation,
+  onOpenLocationPicker,
+  locationLoading,
+  locationLabel,
+  locationError,
+}) {
   const [query, setQuery] = useState("");
 
   const availableMarkets = formData.crop
@@ -170,6 +182,41 @@ function FarmerForm({ t, formData, onChange, onSubmit, loading }) {
               </option>
             ))}
           </select>
+        </div>
+
+        {/* Location detection block */}
+        <div className="rounded-xl border-2 border-green-100 bg-green-50/60 px-4 py-3.5 flex flex-col gap-2">
+          <div className="flex items-center justify-between gap-3 flex-wrap">
+            <button
+              type="button"
+              onClick={onDetectLocation}
+              disabled={locationLoading}
+              className="flex items-center gap-2 text-sm font-semibold text-green-700 hover:text-green-800 disabled:opacity-50 transition"
+            >
+              <FaCrosshairs className={locationLoading ? "animate-spin" : ""} />
+              {locationLoading
+                ? t("detectingLocation") || "Detecting..."
+                : t("useCurrentLocation") || "Use my current location"}
+            </button>
+
+            <button
+              type="button"
+              onClick={onOpenLocationPicker}
+              className="flex items-center gap-1.5 text-xs font-medium text-blue-600 hover:text-blue-700 hover:underline"
+            >
+              <FaMapMarkedAlt />
+              {t("adjustOnMap") || "Adjust on map"}
+            </button>
+          </div>
+
+          {locationLabel && (
+            <span className="text-xs text-gray-600">
+              📍 {locationLabel}
+            </span>
+          )}
+          {locationError && (
+            <span className="text-xs text-red-600">{locationError}</span>
+          )}
         </div>
 
         <div className="grid grid-cols-2 gap-3">

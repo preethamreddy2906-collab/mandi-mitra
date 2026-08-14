@@ -60,15 +60,28 @@ function MaxPriceTrendChart({ t, history, empty, location }) {
                   border: "1px solid #d1fae5",
                   fontSize: 13,
                 }}
-                formatter={(value) => [`₹${value}`, "Max Price"]}
+                formatter={(value, name) => {
+                  const label = name === "modalPrice" ? "Modal Price" : "Max Price";
+                  return [`₹${value}`, label];
+                }}
+              />
+              <Line
+                type="monotone"
+                dataKey="modalPrice"
+                stroke="#16a34a"
+                strokeWidth={2.5}
+                dot={{ r: 3, fill: "#16a34a" }}
+                activeDot={{ r: 5 }}
+                name="modalPrice"
               />
               <Line
                 type="monotone"
                 dataKey="maxPrice"
                 stroke="#dc2626"
-                strokeWidth={2.5}
-                dot={{ r: 3, fill: "#dc2626" }}
-                activeDot={{ r: 5 }}
+                strokeWidth={2.0}
+                dot={{ r: 2.5, fill: "#dc2626" }}
+                activeDot={{ r: 4 }}
+                name="maxPrice"
               />
             </LineChart>
           </ResponsiveContainer>

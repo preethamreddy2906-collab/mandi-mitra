@@ -16,16 +16,27 @@ def get_market_data(state, district, market, crop):
     conn = get_connection()
     cursor = conn.cursor()
 
-    cursor.execute("""
-        SELECT *
-        FROM mandi_market_data
-        WHERE state = ?
-            AND district = ?
-            AND market = ?
-            AND commodity = ?
-        ORDER BY arrival_date DESC
-        LIMIT 1
-    """, (state, district, market, crop))
+    if district and district.strip():
+        cursor.execute("""
+            SELECT *
+            FROM mandi_market_data
+            WHERE state = ?
+                AND district = ?
+                AND market = ?
+                AND commodity = ?
+            ORDER BY arrival_date DESC
+            LIMIT 1
+        """, (state, district, market, crop))
+    else:
+        cursor.execute("""
+            SELECT *
+            FROM mandi_market_data
+            WHERE state = ?
+                AND market = ?
+                AND commodity = ?
+            ORDER BY arrival_date DESC
+            LIMIT 1
+        """, (state, market, crop))
 
     row = cursor.fetchone()
     conn.close()
@@ -45,16 +56,27 @@ def get_market_history(state, district, market, crop, limit=30):
     conn = get_connection()
     cursor = conn.cursor()
 
-    cursor.execute("""
-    SELECT arrival_date, max_price, modal_price, min_price
-    FROM mandi_market_data
-    WHERE state = ?
-        AND district = ?
-        AND market = ?
-        AND commodity = ?
-    ORDER BY arrival_date DESC
-    LIMIT ?
-    """, (state, district, market, crop, limit))
+    if district and district.strip():
+        cursor.execute("""
+        SELECT arrival_date, max_price, modal_price, min_price
+        FROM mandi_market_data
+        WHERE state = ?
+            AND district = ?
+            AND market = ?
+            AND commodity = ?
+        ORDER BY arrival_date DESC
+        LIMIT ?
+        """, (state, district, market, crop, limit))
+    else:
+        cursor.execute("""
+        SELECT arrival_date, max_price, modal_price, min_price
+        FROM mandi_market_data
+        WHERE state = ?
+            AND market = ?
+            AND commodity = ?
+        ORDER BY arrival_date DESC
+        LIMIT ?
+        """, (state, market, crop, limit))
 
     rows = [dict(row) for row in cursor.fetchall()]
     conn.close()

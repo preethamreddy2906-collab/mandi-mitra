@@ -12,7 +12,7 @@ from gtts import gTTS
 #     sys.path.append(str(EVALUATIONS_DIR))
 
 
-from evaluations.model import call_gemma
+from evaluations.model import call_gemma, build_local_fallback_advisory
 from evaluations.agmarknet_api import fetch_historical_prices
 
 def clean_text_for_tts(text: str, language_code: str = "") -> str:
@@ -110,7 +110,16 @@ def get_advisory(data: dict):
         print("Printing Recomendation")
         print(recommendation)
     except Exception as exc:
-        recommendation = f"Unable to generate advisory right now: {exc}"
+        recommendation = build_local_fallback_advisory(
+            commodity=commodity,
+            state=state,
+            district=district,
+            market=market,
+            latitude=latitude,
+            longitude=longitude,
+            language=language,
+        )
+        print(f"Falling back to local advisory because NVIDIA call failed: {exc}")
 
     historic_prices = fetch_historical_prices(
         commodity=commodity,

@@ -97,7 +97,12 @@ def summarize_market(history: pd.DataFrame) -> dict:
     recent_prices = [
         {
             "date": row["arrival_date"].strftime("%Y-%m-%d"),
-            "modal_price": safe_float(row["modal_price"])
+            "modal_price": safe_float(row["modal_price"]),
+            "modalPrice": safe_float(row["modal_price"]),
+            "max_price": safe_float(row["max_price"]),
+            "maxPrice": safe_float(row["max_price"]),
+            "min_price": safe_float(row["min_price"]),
+            "minPrice": safe_float(row["min_price"]),
         }
         for _, row in df.iterrows()
     ]
@@ -129,7 +134,8 @@ def summarize_market(history: pd.DataFrame) -> dict:
             round(seven_day_change, 2) if seven_day_change is not None else None
         ),
         "trend": trend,
-        "recent_modal_prices": recent_prices
+        "recent_modal_prices": recent_prices,
+        "recent_prices": recent_prices,
     }
 
 def summarize_weather(weather_data: dict) -> dict:

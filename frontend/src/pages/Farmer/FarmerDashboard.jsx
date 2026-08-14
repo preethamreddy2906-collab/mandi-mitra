@@ -179,7 +179,33 @@ function FarmerDashboard() {
     setLoading(true);
 
     try {
-      const response = await api.post("/advisory/", {
+      const historyResponse = await api.get("/market/history", {
+        params: {
+          state: formData.state,
+          district: formData.district || "",
+          market: formData.market,
+          crop: formData.crop,
+          limit: 7,
+        },
+      });
+
+      const normalizedHistory = Array.isArray(historyResponse.data)
+        ? historyResponse.data.map((item) => ({
+            date: item.date || item.arrival_date,
+            modalPrice: Number(item.modalPrice ?? item.modal_price ?? 0),
+            maxPrice: Number(item.maxPrice ?? item.max_price ?? 0),
+            minPrice: Number(item.minPrice ?? item.min_price ?? 0),
+          }))
+        : [];
+
+      setPriceHistory(normalizedHistory);
+    } catch (error) {
+      console.error("Market history fetch failed:", error);
+      setPriceHistory([]);
+    }
+
+    try {
+      const advisoryResponse = await api.post("/advisory/", {
         state: formData.state,
         crop: formData.crop,
         language: formData.language,
@@ -190,19 +216,40 @@ function FarmerDashboard() {
         longitude: formData.longitude || 78.505798,
       });
 
-      console.log("raw gemma response:", response.data);
-
-      const normalized = normalizeAdvisory(response.data, formData);
+      console.log("raw gemma response:", advisoryResponse.data);
+      const normalized = normalizeAdvisory(advisoryResponse.data, formData);
       console.log("normalized advisory:", normalized);
-
       setAdvisory(normalized);
-
-      if (normalized?.price_history) {
-        setPriceHistory(normalized.price_history);
-      }
     } catch (error) {
-      console.error(error);
-      alert("Failed to fetch advisory.");
+      console.error("Advisory fetch failed:", error);
+      setAdvisory({
+        weather: {
+          temperature: "—",
+          humidity: "—",
+          rainfall: "—",
+        },
+        market: {
+          marketName: formData.market,
+          modalPrice: "—",
+          highestPrice: "—",
+          lowestPrice: "—",
+          modalPriceValue: 0,
+          highestPriceValue: 0,
+          lowestPriceValue: 0,
+          arrivalDate: new Date().toLocaleDateString(),
+          trend: "Stable",
+        },
+        crop: {
+          harvestTip: "Use local market price data to decide the selling window.",
+          storageTip: "Store produce in a cool, dry place.",
+          bestSellingPeriod: "This week",
+        },
+        recommendation: "The model API is unavailable right now, but the market price chart is still available.",
+        reasons: ["The nearby mandi price trend is available from the market history API."],
+        confidence: 0,
+        riskLevel: "Low",
+        decision: "hold",
+      });
     } finally {
       setTimeout(() => setLoading(false), 1800);
     }

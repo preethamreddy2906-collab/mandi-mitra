@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import api from "../../services/api";
 
@@ -41,6 +41,42 @@ function FarmerDashboard() {
   const [locationLabel, setLocationLabel] = useState("");
   const [locationError, setLocationError] = useState("");
   const [showLocationPicker, setShowLocationPicker] = useState(false);
+
+  useEffect(() => {
+    const fetchHistory = async () => {
+      if (!formData.state || !formData.crop || !formData.market) {
+        setPriceHistory(null);
+        return;
+      }
+      try {
+        const historyResponse = await api.get("/market/history", {
+          params: {
+            state: formData.state,
+            district: formData.district || "",
+            market: formData.market,
+            crop: formData.crop,
+            limit: 7,
+          },
+        });
+
+        const normalizedHistory = Array.isArray(historyResponse.data)
+          ? historyResponse.data.map((item) => ({
+              date: item.date || item.arrival_date,
+              modalPrice: Number(item.modalPrice ?? item.modal_price ?? 0),
+              maxPrice: Number(item.maxPrice ?? item.max_price ?? 0),
+              minPrice: Number(item.minPrice ?? item.min_price ?? 0),
+            }))
+          : [];
+
+        setPriceHistory(normalizedHistory);
+      } catch (error) {
+        console.error("Auto-fetch market history failed:", error);
+        setPriceHistory([]);
+      }
+    };
+
+    fetchHistory();
+  }, [formData.state, formData.district, formData.market, formData.crop]);
 
   const t = getTranslator(formData.language);
 
@@ -346,7 +382,7 @@ function FarmerDashboard() {
             <MaxPriceTrendChart
               t={t}
               history={priceHistory || []}
-              empty={isEmpty}
+              empty={!formData.crop || !formData.market}
               location={formData.market ? `${formData.market}, ${formData.state}` : formData.state}
             />
 

@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { motion } from "framer-motion";
 import {
   FaSeedling,
@@ -5,7 +6,9 @@ import {
   FaMapMarkedAlt,
   FaCalendarAlt,
   FaWeightHanging,
+  FaMicrophone,
 } from "react-icons/fa";
+import VoiceInput from "./VoiceInput";
 
 const STATE_DISTRICT_MAP = {
   "Andhra Pradesh": [
@@ -90,10 +93,19 @@ const selectClass =
   "w-full border-2 border-gray-200 rounded-xl px-4 py-3.5 text-base bg-white focus:outline-none focus:ring-4 focus:ring-green-100 focus:border-green-500 transition disabled:bg-gray-50 disabled:cursor-not-allowed";
 
 function FarmerForm({ t, formData, onChange, onSubmit, loading }) {
+  const [query, setQuery] = useState("");
+
   const availableMarkets = formData.crop
     ? MARKET_OPTIONS[formData.crop] || []
     : [];
 
+  const langMapping = {
+    Telugu: "te-IN",
+    Hindi: "hi-IN",
+    Tamil: "ta-IN",
+    English: "en-IN",
+  };
+  const voiceLang = langMapping[formData.language] || "te-IN";
 
   return (
     <motion.div
@@ -208,6 +220,24 @@ function FarmerForm({ t, formData, onChange, onSubmit, loading }) {
             <option value="Telugu">తెలుగు</option>
             <option value="Hindi">हिन्दी</option>
           </select>
+        </div>
+
+        <div>
+          <FieldLabel icon={<FaMicrophone />}>{t("voiceQuery") || "Ask a Custom Question"}</FieldLabel>
+          <div className="flex gap-2 items-center w-full relative z-10">
+            <input
+              type="text"
+              name="query"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="Speak or type your question..."
+              className="flex-grow min-w-0 border-2 border-gray-200 rounded-xl px-4 py-3.5 text-base bg-white focus:outline-none focus:ring-4 focus:ring-green-100 focus:border-green-500 transition disabled:bg-gray-50 disabled:cursor-not-allowed"
+            />
+            <VoiceInput
+              lang={voiceLang}
+              onTranscript={(text) => setQuery(text)}
+            />
+          </div>
         </div>
 
       </div >

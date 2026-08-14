@@ -8,6 +8,7 @@ import {
   FaCheckCircle,
 } from "react-icons/fa";
 import jsPDF from "jspdf";
+import { useRef, useEffect } from "react";
 
 const RISK_STYLES = {
   Low: "bg-green-100 text-green-700 border-green-200",
@@ -87,6 +88,57 @@ function handleDownloadPdf(advisory, formData) {
 }
 
 function AdvisoryCard({ t, advisory, formData, empty, onAskAgain }) {
+  const audioRef = useRef(null);
+
+  useEffect(() => {
+    if (!empty && advisory?.audioBase64) {
+      const audioUrl = `data:audio/mp3;base64,${advisory.audioBase64}`;
+      const audio = new Audio(audioUrl);
+      audioRef.current = audio;
+
+      audio.play().catch((err) => {
+        console.log("Autoplay was prevented by browser policy. Interaction required.", err);
+      });
+    }
+
+    return () => {
+      if (audioRef.current) {
+        audioRef.current.pause();
+        audioRef.current = null;
+      }
+    };
+  }, [advisory, empty]);
+
+  const handlePlayAdvisoryAudio = () => {
+    if (advisory?.audioBase64) {
+      if (audioRef.current) {
+        if (audioRef.current.ended) {
+          audioRef.current.currentTime = 0;
+          audioRef.current.play().catch((err) => {
+            console.error("Audio playback failed:", err);
+          });
+          return;
+        }
+        if (!audioRef.current.paused) {
+          audioRef.current.pause();
+          return;
+        }
+        audioRef.current.play().catch((err) => {
+          console.error("Audio playback failed:", err);
+        });
+      } else {
+        const audioUrl = `data:audio/mp3;base64,${advisory.audioBase64}`;
+        const audio = new Audio(audioUrl);
+        audioRef.current = audio;
+        audio.play().catch((err) => {
+          console.error("Audio playback failed:", err);
+        });
+      }
+    } else {
+      handleReadAloud(advisory, formData.crop, formData.language);
+    }
+  };
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 18 }}
@@ -158,12 +210,10 @@ function AdvisoryCard({ t, advisory, formData, empty, onAskAgain }) {
 
           <div className="mt-6 flex flex-wrap gap-3">
             <button
-              onClick={() =>
-                handleReadAloud(advisory, formData.crop, formData.language)
-              }
+              onClick={handlePlayAdvisoryAudio}
               className="flex items-center gap-2 bg-white/15 hover:bg-white/25 px-4 py-2.5 rounded-xl text-sm font-semibold transition-colors"
             >
-              <FaVolumeUp /> {t("readAloud")}
+              <FaVolumeUp /> {advisory?.audioBase64 ? "🔊 Listen to Advisory" : t("readAloud")}
             </button>
             <button
               onClick={() => handleDownloadPdf(advisory, formData)}

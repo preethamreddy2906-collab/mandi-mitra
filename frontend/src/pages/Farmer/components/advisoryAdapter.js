@@ -86,6 +86,6 @@ export function normalizeAdvisory(raw, formData) {
     confidence: raw.confidence ?? 82,
     riskLevel,
     decision: inferDecision(riskLevel, trend, raw.recommendation),
-
+    audioBase64: raw.audio_base64,
   };
 }
